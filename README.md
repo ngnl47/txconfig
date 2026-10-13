@@ -91,3 +91,9 @@ B3（整表类型）：
 配置日期使用 datetime 类型，文本按 `2026-01-01 00:00:00` 填写，或使用 Excel 原生日期。Luban 在导出时按组时区转换；txgen 统一输出 Unix 毫秒字符串，业务加载为 Go int64 / TS bigint。示例组为 utc/pacific/beijing；同一份 Excel 导出三组 JSON，代码结构共用。`server@login.xlsx` 的 openTime 与 `rule@battle.xlsx` 的 winterStart/summerStart 展示绝对日期与冬夏时差。
 
 datetime 请填写明确日期；原生 Luban 不将空日期当 Unix 0，不能套用普通数字单元格的空值约定。若需要可选的绝对时间或全球同一时刻，使用 int64 Unix 毫秒（空值为 0），不要将地区日期重复当 UTC 使用。导出器不重算公式，策划须用 Excel 保存准确的公式缓存结果。
+
+## 当前道具示例
+
+`base@item.xlsx` 只维护 `id`、`name`、`quality`、`enabled`。前三列双端导出，enabled 仅服务端导出，用于决定随机领奖候选；第三个道具为关闭示例，不参与发放。客户端从本地配置补齐名称与品质，玩家背包数据只保存 ID 和数量。
+
+极值整数、空值、列表和导出字段筛选的生成器边界夹具位于 txgen 的 `tests/input/config`，不再要求策划业务表保留测试字段。
