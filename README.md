@@ -1,6 +1,6 @@
 # txconfig 策划配置源
 
-本仓库维护 Excel、表与枚举登记及 Luban 导出规则，供 txgame、后续的 txgameslg 使用。生成工具和双端产物不放在本仓库。
+本仓库维护 Excel、表与枚举登记及 Luban 导出规则，供 txgame、txgameslg 使用。生成工具和双端产物不放在本仓库。
 
 目录结构：
 
@@ -13,7 +13,8 @@ txconfig/
     ├── __enums__.xlsx
     ├── login.xlsx       # 登录领域：server、note（说明页）
     ├── item.xlsx        # 道具领域：base
-    └── battle.xlsx      # 战斗领域：rule
+    ├── battle.xlsx      # 战斗领域：rule
+    └── world.xlsx       # 世界领域：binding，主服到世界映射
 ```
 
 将 txconfig、txgame、txclient 放在同级目录，txgame 的 `gen/config.yml` 配置：
@@ -38,7 +39,7 @@ editions:
 TXGEN_DOTNET=/path/to/dotnet go test ./main/txgen -run TestLubanExportAndGeneratedGo -count=1
 ```
 
-验收从配置的输入目录复制示例到临时目录，包含失败场景，不修改本仓库。txgameslg 后续接入时维护自己的生成配置和产物目录，不覆盖 txgame 或 txclient 的产物。
+验收从配置的输入目录复制示例到临时目录，包含失败场景，不修改本仓库。txgameslg 维护自己的生成配置和产物目录，不覆盖 txgame 或 txclient 的产物。
 
 - `excel/__tables__.xlsx`：Luban 原生表登记，填写 `input`（`sheet@文件.xlsx`）、`mode`、`index` 等；`full_name`、`value_type` 由表内公式计算。`read_schema_from_file=true` 表示类型直接取自数据 Sheet。
 - `excel/__enums__.xlsx`：原生枚举登记；`*items` 表头合并单元格覆盖 name/alias/value/comment/tags。枚举只生成代码。
@@ -51,10 +52,10 @@ TXGEN_DOTNET=/path/to/dotnet go test ./main/txgen -run TestLubanExportAndGenerat
 ## 命名与组织规则
 
 - **工作簿按具体业务模块聚合**，文件名使用小写 `snake_case`，例如 `login.xlsx`、`item.xlsx`、`battle.xlsx`。同模块新增相关配置时，优先添加到已有工作簿的不同 Sheet，不按每张逻辑表新建文件，也不把所有模块重新汇入一个 `game.xlsx`。
-- **Sheet 使用小写 `snake_case`，不重复模块前缀**，例如 `base`、`rule`、`quality_rule`；以后增加战斗技能、奖励配置时，在 `battle.xlsx` 中增加 `skill`、`reward`。不同工作簿可以有同名 Sheet，通过完整 `sheet@文件.xlsx` 区分。这里只说明命名示例，不预建空表。
+- **Sheet 使用小写 `snake_case`，不重复模块前缀**，例如 `base`、`rule`、`quality_rule`；以后增加战斗技能、奖励配置时，在 `battle.xlsx` 中增加 `skill`、`reward`。物理定位使用完整 `sheet@文件.xlsx`；当前固定 Luban 构建对登记后的表短名也要求唯一，因此实际导出 Sheet 避免跨工作簿同名。这里只说明命名示例，不预建空表。
 - **每个独立业务 Sheet 在 `__tables__.xlsx` 单独登记**，`input` 明确写成 `sheet@文件.xlsx`。不启用按文件自动导入，避免把同一工作簿的不同结构当作同一张表读取。说明和辅助计算 Sheet 不登记，不输出为业务数据。
-- **以工作簿名作为命名空间，以 Sheet 名作为类型名来源**：去掉 `.xlsx` 后的文件名是命名空间，将 Sheet 名转为 PascalCase 后作为记录类型名，整表类型再加 `Tb` 前缀。例如 `base@item.xlsx` 计算为 `item.TbBase` / `item.Base`，`quality_rule@item.xlsx` 计算为 `item.TbQualityRule` / `item.QualityRule`。`login.Item` 和 `bag.Item` 可以共存，但完整逻辑名称必须唯一。命名转换由登记表公式完成，生成器读取保存的结果。
-- **文件名与 Sheet 名会影响生成接口**：修改 `input` 会联动 `full_name`、`value_type`；重命名工作簿、重命名 Sheet 或将 Sheet 移到其他工作簿，需要同时检查业务类型引用及默认 JSON 文件名的变化。物理 Sheet 由完整 `sheet@文件` 定位，跨工作簿可重名，不能用重名逻辑表覆盖已有定义。
+- **以工作簿名作为命名空间，以 Sheet 名作为类型名来源**：去掉 `.xlsx` 后的文件名是命名空间，将 Sheet 名转为 PascalCase 后作为记录类型名，整表类型再加 `Tb` 前缀。例如 `base@item.xlsx` 计算为 `item.TbBase` / `item.Base`，`quality_rule@item.xlsx` 计算为 `item.TbQualityRule` / `item.QualityRule`。命名空间参与完整逻辑名称；当前导出构建还校验表短名，不能仅靠命名空间绕过重名。命名转换由登记表公式完成，生成器读取保存的结果。
+- **文件名与 Sheet 名会影响生成接口**：修改 `input` 会联动 `full_name`、`value_type`；重命名工作簿、重命名 Sheet 或将 Sheet 移到其他工作簿，需要同时检查业务类型引用及默认 JSON 文件名的变化。物理 Sheet 由完整 `sheet@文件` 定位，不能用重名逻辑表覆盖已有定义。
 - **枚举集中登记**于 `__enums__.xlsx`，按命名空间区分所属模块，不输出独立 JSON；常量仍放在所属模块工作簿的竖向 Sheet 中，以 `mode=one` 登记。
 - **输出代码集中、数据按表拆分**：服务端统一生成 `config.go`，客户端统一生成 `config.ts`，包含各自需要的类型、解析器与快照入口；不按工作簿或 Table 增加代码文件。JSON 按逻辑表及配置组分别输出，三个时区组共用同一份代码。显式设置 `output` 时使用小写 `snake_case` 且不带 `.json`；留空时由 Luban 根据完整表名生成，例如 `item.TbBase` 输出 `item_tbbase.json`。同一导出端的文件名不能冲突。
 
@@ -97,3 +98,7 @@ datetime 请填写明确日期；原生 Luban 不将空日期当 Unix 0，不能
 `base@item.xlsx` 只维护 `id`、`name`、`quality`、`enabled`。前三列双端导出，enabled 仅服务端导出，用于决定随机领奖候选；第三个道具为关闭示例，不参与发放。客户端从本地配置补齐名称与品质，玩家背包数据只保存 ID 和数量。
 
 极值整数、空值、列表和导出字段筛选的生成器边界夹具位于 txgen 的 `tests/input/config`，不再要求策划业务表保留测试字段。
+
+## 当前世界映射示例
+
+`binding@world.xlsx` 登记为 `world.TbBinding` / `world.Binding`，仅服务端导出。mainServerID 是唯一索引，worldID 为正 int64；示例为 1～10 和开发服 1001 对应世界 1。Game 经 GDServer 目录解析主服后查询，客户端通过 Role_GetWorld 获取结果，不携带全服映射表。该配置只表达业务关联，不代表 Actor 宿主分配或世界就绪；变更后重新导出完整配置，并按有状态部署要求停服更新。
