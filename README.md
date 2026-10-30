@@ -101,4 +101,10 @@ datetime 请填写明确日期；原生 Luban 不将空日期当 Unix 0，不能
 
 ## 当前世界映射示例
 
-`binding@world.xlsx` 登记为 `world.TbBinding` / `world.Binding`，仅服务端导出。mainServerID 是唯一索引，worldID 为正 int64；示例为 1～10 和开发服 1001 对应世界 1。Game 经 GDServer 目录解析主服后查询，客户端通过 Role_GetWorld 获取结果，不携带全服映射表。该配置只表达业务关联，不代表 Actor 宿主分配或世界就绪；变更后重新导出完整配置，并按有状态部署要求停服更新。
+`binding@world.xlsx` 登记为 `world.TbBinding` / `world.Binding`，仅服务端导出。mainServerID 是唯一索引，worldID 为正 int64；示例为 1～10 和开发服 1001 对应世界 1。Game 经 GDServerMerge 的启动快照解析主服后查询，客户端通过 Role_GetWorld 获取结果，不携带全服映射表。该配置只表达业务关联，不代表 Actor 宿主分配或世界就绪；变更后重新导出完整配置，并按有状态部署要求停服更新。
+
+## 服务器目录与合服
+
+`server@login.xlsx` 只提供原逻辑服列表与首次建服初值，不保存 `realId` 或合服映射。合服后客户端仍显示各原入口。应用 Mongo 的 `GDServerMerge` 单文档保存带生效时间的节点，由项目运维入口整份条件更新；纯合服计划修改无需重新导出 Excel。
+
+`world.binding.mainServerID` 是主服进入哪个 World 的业务关联，继续保留，不与合服关系重复。两组应用的在线/停服生效边界见各自 `docs/server_merge.md`。
